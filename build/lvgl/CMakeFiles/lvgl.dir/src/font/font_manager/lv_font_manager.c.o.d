@@ -1,0 +1,58 @@
+lvgl/CMakeFiles/lvgl.dir/src/font/font_manager/lv_font_manager.c.o: \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/lv_font_manager.c \
+ /usr/include/stdc-predef.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/lv_font_manager.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/lv_font.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../lv_conf_internal.h \
+ /home/lckien/smart_door_pi/lv_conf.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../misc/lv_types.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../misc/../lv_conf_internal.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/stdint.h /usr/include/stdint.h \
+ /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
+ /usr/include/features.h /usr/include/features-time64.h \
+ /usr/include/aarch64-linux-gnu/bits/wordsize.h \
+ /usr/include/aarch64-linux-gnu/bits/timesize.h \
+ /usr/include/aarch64-linux-gnu/sys/cdefs.h \
+ /usr/include/aarch64-linux-gnu/bits/long-double.h \
+ /usr/include/aarch64-linux-gnu/gnu/stubs.h \
+ /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
+ /usr/include/aarch64-linux-gnu/bits/types.h \
+ /usr/include/aarch64-linux-gnu/bits/typesizes.h \
+ /usr/include/aarch64-linux-gnu/bits/time64.h \
+ /usr/include/aarch64-linux-gnu/bits/wchar.h \
+ /usr/include/aarch64-linux-gnu/bits/stdint-intn.h \
+ /usr/include/aarch64-linux-gnu/bits/stdint-uintn.h \
+ /usr/include/aarch64-linux-gnu/bits/stdint-least.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/stddef.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/stdbool.h \
+ /usr/include/inttypes.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/limits.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/syslimits.h \
+ /usr/include/limits.h /usr/include/aarch64-linux-gnu/bits/posix1_lim.h \
+ /usr/include/aarch64-linux-gnu/bits/local_lim.h \
+ /usr/include/linux/limits.h \
+ /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+ /usr/include/aarch64-linux-gnu/bits/pthread_stack_min.h \
+ /usr/include/aarch64-linux-gnu/bits/posix2_lim.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/stdarg.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/lv_symbol_def.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/lv_draw_buf.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_types.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_area.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/../lv_conf_internal.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_types.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_math.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_color.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_assert.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_log.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/../stdlib/lv_mem.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/../stdlib/../lv_conf_internal.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/../stdlib/lv_string.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/../stdlib/../misc/lv_types.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_palette.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_color.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../misc/lv_color_op.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../stdlib/lv_string.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/lv_image_dsc.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../draw/../lv_conf_internal.h \
+ /home/lckien/smart_door_pi/lvgl/src/font/font_manager/../../font/../misc/lv_area.h

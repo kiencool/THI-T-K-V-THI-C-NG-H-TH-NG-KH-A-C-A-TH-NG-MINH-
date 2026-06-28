@@ -1,0 +1,5 @@
+lvgl/CMakeFiles/lvgl.dir/src/libs/nanovg/nanovg.c.o: \
+ /home/lckien/smart_door_pi/lvgl/src/libs/nanovg/nanovg.c \
+ /usr/include/stdc-predef.h \
+ /home/lckien/smart_door_pi/lvgl/src/libs/nanovg/../../lv_conf_internal.h \
+ /home/lckien/smart_door_pi/lv_conf.h

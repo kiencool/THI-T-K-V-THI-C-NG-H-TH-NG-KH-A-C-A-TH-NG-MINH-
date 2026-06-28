@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Door Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        /* Login Overlay Styles */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .login-box {
+            background: var(--card-bg); padding: 30px; border-radius: 12px;
+            width: 100%; max-width: 400px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .login-box h2 { margin-top: 0; margin-bottom: 20px; color: var(--primary-color); }
+        .login-box select, .login-box input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2); color: white;
+        }
+        .login-box button { width: 100%; padding: 12px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <!-- Login Overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2>Đăng nhập Hệ thống</h2>
+            <select id="login-role">
+                <option value="admin">Chủ trọ (Admin)</option>
+                <option value="tenant">Người ở trọ (Tenant)</option>
+            </select>
+            <input type="password" id="login-password" placeholder="Nhập mật khẩu">
+            <button class="btn btn-primary" onclick="doLogin()">Đăng nhập</button>
+        </div>
+    </div>
+
+    <div class="dashboard-container" style="display: none;" id="main-dashboard">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <span>Smart Door Pi</span>
+            </div>
+            
+            <div class="nav-links">
+                <a href="#overview" class="active" data-tab="overview">
+                    <i class="fas fa-home"></i> Tổng quan
+                </a>
+                <a href="#locks" data-tab="locks">
+                    <i class="fas fa-lock"></i> Điều khiển khóa
+                </a>
+                <a href="#logs" data-tab="logs">
+                    <i class="fas fa-history"></i> Lịch sử truy cập
+                </a>
+                <a href="#users" data-tab="users">
+                    <i class="fas fa-users"></i> Người dùng
+                </a>
+                <a href="#settings" data-tab="settings" class="admin-only">
+                    <i class="fas fa-cog"></i> Cài đặt
+                </a>
+                <a href="#delivery" data-tab="delivery" class="tenant-only" style="display:none;">
+                    <i class="fas fa-box-open"></i> Mã Giao Hàng
+                </a>
+            </div>
+
+            <div class="connection-status offline" id="conn-status">
+                <i class="fas fa-circle"></i> <span>Mất kết nối</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header>
+                <h2>Tổng quan hệ thống</h2>
+                <div class="user-profile">
+                    <div class="avatar">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <span id="header-role-name">Đang tải...</span>
+                    <button class="btn btn-sm" onclick="doLogout()" style="margin-left: 10px; background: rgba(255,0,0,0.2);">Thoát</button>
+                </div>
+            </header>
+
+            <!-- Dashboard Tabs -->
+            <div class="tab-content active" id="tab-overview">
+                <div class="section-header" style="margin-bottom: 15px;">
+                    <h3><i class="fas fa-info-circle"></i> Trạng thái hiện tại</h3>
+                    <button class="btn btn-sm" onclick="fetchDoorStatus(this)" style="background: var(--primary-color);"><i class="fas fa-sync"></i> Kiểm tra</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-door-closed"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Cửa Chính</h3>
+                            <p class="status-text lock-status" id="main-door-status" style="color: #aaa;">Chưa xác định</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon orange">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Tủ Nhận Đồ</h3>
+                            <p class="status-text lock-status" id="delivery-box-status" style="color: #aaa;">Chưa xác định</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Trạng Thái Mạng</h3>
+                            <p class="status-text">Kết nối tốt</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Uptime</h3>
+                            <p class="status-text" id="sys-uptime">Đang tải...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-events">
+                    <div class="section-header">
+                        <h3>Sự kiện gần đây</h3>
+                        <button class="btn btn-sm" onclick="clearLogs()">Xóa</button>
+                    </div>
+                    <div class="event-list" id="event-list">
+                        <!-- Events will be populated by JS -->
+                        <div class="event-item">
+                            <div class="event-icon info"><i class="fas fa-info-circle"></i></div>
+                            <div class="event-desc">
+                                <strong>Hệ thống</strong>
+                                <span>Đang chờ dữ liệu...</span>
+                            </div>
+                            <div class="event-time">Bây giờ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Locks Control Tab -->
+            <div class="tab-content" id="tab-locks">
+                <div class="control-card">
+                    <h3><i class="fas fa-door-open"></i> Điều Khiển Từng Cửa</h3>
+                    <p style="color: var(--danger-color); font-weight: bold;">Chỉ mở độc lập 1 cửa. Cửa này đóng thì cửa kia mới mở được.</p>
+                    
+                    <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Cửa Chính</h4>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button id="btn-main-unlock" class="btn btn-primary" onclick="controlDoor('main', 'unlock')" style="flex: 1; padding: 15px;">
+                                    <i class="fas fa-unlock"></i> Mở Cửa Chính
+                                </button>
+                                <button id="btn-main-lock" class="btn btn-primary" style="flex: 1; padding: 15px; background: var(--danger-color);" onclick="controlDoor('main', 'lock')">
+                                    <i class="fas fa-lock"></i> Khóa Ngay
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4>Tủ Nhận Đồ (Shipper)</h4>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button id="btn-delivery-unlock" class="btn btn-primary" onclick="controlDoor('delivery', 'unlock')" style="flex: 1; padding: 15px;">
+                                    <i class="fas fa-box-open"></i> Mở Tủ Nhận Đồ
+                                </button>
+                                <button id="btn-delivery-lock" class="btn btn-primary" style="flex: 1; padding: 15px; background: var(--danger-color);" onclick="controlDoor('delivery', 'lock')">
+                                    <i class="fas fa-lock"></i> Khóa Ngay
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty Tabs for demo -->
+            <div class="tab-content" id="tab-logs">
+                <div class="control-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3><i class="fas fa-history"></i> Lịch sử truy cập</h3>
+                        <div>
+                            <button class="btn btn-sm" onclick="loadHistory()"><i class="fas fa-sync"></i> Làm mới</button>
+                            <button class="btn btn-sm" style="background: var(--danger-color); margin-left: 5px;" onclick="clearHistory()"><i class="fas fa-trash"></i> Xóa</button>
+                        </div>
+                    </div>
+                    <p>Nhật ký đóng/mở cửa bằng thẻ, khuôn mặt, mã giao hàng hoặc qua Web.</p>
+                    <div class="card-list-container" style="margin-top: 15px; max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="padding: 10px;">Thời gian</th>
+                                    <th style="padding: 10px;">Cửa</th>
+                                    <th style="padding: 10px;">Hành động</th>
+                                    <th style="padding: 10px;">Cách thức</th>
+                                    <th style="padding: 10px;">Người thực hiện</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <tr><td colspan="3" style="padding: 10px; text-align: center;">Đang tải...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="tab-users">
+                <div class="users-container" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                    <!-- Card List -->
+                    <div class="control-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3><i class="fas fa-list"></i> Danh sách thẻ đã cấp</h3>
+                            <button class="btn btn-sm" onclick="loadCards()"><i class="fas fa-sync"></i> Làm mới</button>
+                        </div>
+                        <p>Danh sách những thẻ có quyền mở cửa. Để thêm thẻ mới, hãy dùng thẻ Admin quét vào thiết bị rồi đưa thẻ mới vào.</p>
+                        <div class="card-list-container" style="margin-top: 15px; max-height: 400px; overflow-y: auto;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                        <th style="padding: 10px;">Thời gian cấp</th>
+                                        <th style="padding: 10px;">Mã UID</th>
+                                        <th style="padding: 10px; text-align: right;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cards-table-body">
+                                    <tr><td colspan="3" style="padding: 10px; text-align: center;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-settings">
+                <div class="empty-state">
+                    <i class="fas fa-cog"></i>
+                    <h3>Cài đặt hệ thống</h3>
+                    <p>Tính năng đang được phát triển</p>
+                </div>
+            </div>
+
+            <!-- Delivery Code Tab (Tenant) -->
+            <div class="tab-content" id="tab-delivery">
+                <div class="control-card" style="max-width: 600px; margin: 0 auto;">
+                    <h3><i class="fas fa-box-open"></i> Tạo Mã Nhận Đồ (Cho Shipper)</h3>
+                    <p>Tạo một mã số (ví dụ: 8888) và gửi cho Shipper. Shipper sẽ bấm mã này trên màn hình để Tủ Nhận Đồ tự động mở.</p>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <input type="text" id="new-delivery-creator" placeholder="Tên người tạo (Ví dụ: Phòng 102)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; margin-bottom: 10px; font-size: 16px;">
+                        <input type="text" id="new-delivery-code" placeholder="Nhập mã số (ít nhất 4 số)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; margin-bottom: 15px; font-size: 18px; text-align: center;">
+                        <button class="btn btn-primary btn-large" onclick="createDeliveryCode()" style="width: 100%;">
+                            <i class="fas fa-plus"></i> Tạo Mã Nhận Đồ
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <h4>Danh sách mã đang kích hoạt:</h4>
+                        <table style="width: 100%; margin-top: 10px; text-align: left; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="padding: 10px;">Người tạo</th>
+                                    <th style="padding: 10px;">Mã Giao Hàng</th>
+                                    <th style="padding: 10px; text-align: right;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="delivery-codes-body">
+                                <tr><td colspan="2" style="padding: 10px; text-align: center;">Chưa có mã nào</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="toast-content">
+            <h4 id="toast-title">Thành công</h4>
+            <p id="toast-message">Thao tác thành công</p>
+        </div>
+    </div>
+
+    <script src="app.js?v=15"></script>
+</body>
+</html>

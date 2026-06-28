@@ -1,0 +1,15 @@
+/home/lckien/smart_door_pi/build/CMakeFiles/smart_door_app.dir
+/home/lckien/smart_door_pi/build/CMakeFiles/edit_cache.dir
+/home/lckien/smart_door_pi/build/CMakeFiles/rebuild_cache.dir
+/home/lckien/smart_door_pi/build/CMakeFiles/list_install_components.dir
+/home/lckien/smart_door_pi/build/CMakeFiles/install.dir
+/home/lckien/smart_door_pi/build/CMakeFiles/install/local.dir
+/home/lckien/smart_door_pi/build/CMakeFiles/install/strip.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/lvgl.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/lvgl_thorvg.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/edit_cache.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/rebuild_cache.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/list_install_components.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/install.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/install/local.dir
+/home/lckien/smart_door_pi/build/lvgl/CMakeFiles/install/strip.dir

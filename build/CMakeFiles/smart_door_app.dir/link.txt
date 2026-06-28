@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/smart_door_app.dir/link.d CMakeFiles/smart_door_app.dir/src/main.cpp.o CMakeFiles/smart_door_app.dir/src/ui/ui_app.cpp.o -o smart_door_app  lvgl/lib/liblvgl.a -lpthread -lSDL2 lvgl/lib/liblvgl_thorvg.a lvgl/lib/liblvgl.a lvgl/lib/liblvgl_thorvg.a

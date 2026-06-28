@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/lckien/smart_door_pi/lv_conf.h
+my_include.h
+/home/lckien/smart_door_pi/my_include.h
+
+/home/lckien/smart_door_pi/lvgl/lv_version.h
+
+/home/lckien/smart_door_pi/lvgl/src/draw/sw/blend/helium/lv_blend_helium.S
+Pre_Include_Global.h
+/home/lckien/smart_door_pi/lvgl/src/draw/sw/blend/helium/Pre_Include_Global.h
+RTE_Components.h
+/home/lckien/smart_door_pi/lvgl/src/draw/sw/blend/helium/RTE_Components.h
+../../../../lv_conf_internal.h
+/home/lckien/smart_door_pi/lvgl/src/lv_conf_internal.h
+
+/home/lckien/smart_door_pi/lvgl/src/lv_conf_internal.h
+lv_conf_kconfig.h
+/home/lckien/smart_door_pi/lvgl/src/lv_conf_kconfig.h
+lv_conf.h
+/home/lckien/smart_door_pi/lvgl/src/lv_conf.h
+../../lv_conf.h
+/home/lckien/smart_door_pi/lv_conf.h
+my_include.h
+/home/lckien/smart_door_pi/lvgl/src/my_include.h
+
+/home/lckien/smart_door_pi/lvgl/src/lv_conf_kconfig.h
+sdkconfig.h
+/home/lckien/smart_door_pi/lvgl/src/sdkconfig.h
+esp_attr.h
+/home/lckien/smart_door_pi/lvgl/src/esp_attr.h
+nuttx/config.h
+-
+../lv_version.h
+/home/lckien/smart_door_pi/lvgl/lv_version.h
+lv_rt_thread_conf.h
+-
+

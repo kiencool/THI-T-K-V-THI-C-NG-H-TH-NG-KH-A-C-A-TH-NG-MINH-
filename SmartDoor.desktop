@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Smart Door
+Comment=Khóa cửa thông minh Smart Door Pi
+Exec=bash -c "sudo systemctl restart smart-door"
+Icon=/home/lckien/smart_door_pi/smart_door_icon.png
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupNotify=true
