@@ -11,6 +11,10 @@ namespace AuthService {
 std::vector<Card> registered_cards;
 std::mutex cards_mutex;
 
+std::string current_tenant_pin = "123456";
+std::string current_admin_pin = "190104";
+std::mutex passwords_mutex;
+
 void load_registered_cards() {
     std::lock_guard<std::mutex> lock(cards_mutex);
     registered_cards.clear();
@@ -55,15 +59,38 @@ void enroll_card(const std::string& uid) {
         f.close();
     }
     // Tải lại danh sách thẻ sau khi thêm thẻ mới
+    // Tải lại danh sách thẻ sau khi thêm thẻ mới
     load_registered_cards();
 }
 
+void load_passwords() {
+    std::lock_guard<std::mutex> lock(passwords_mutex);
+    std::ifstream f(PASSWORDS_FILE);
+    if (f.is_open()) {
+        std::string line;
+        while (std::getline(f, line)) {
+            size_t delim = line.find('|');
+            if (delim != std::string::npos) {
+                std::string key = line.substr(0, delim);
+                std::string val = line.substr(delim + 1);
+                val.erase(val.find_last_not_of(" \n\r\t") + 1);
+                if (key == "DOOR_MAIN") current_tenant_pin = val;
+                else if (key == "DOOR_ADMIN") current_admin_pin = val;
+            }
+        }
+        f.close();
+        std::cout << "[SYSTEM] Passwords reloaded from DB.\n";
+    }
+}
+
 bool verify_tenant_pin(const char* pin) {
-    return std::strcmp(pin, TENANT_PIN) == 0;
+    std::lock_guard<std::mutex> lock(passwords_mutex);
+    return current_tenant_pin == pin;
 }
 
 bool verify_admin_pin(const char* pin) {
-    return std::strcmp(pin, ADMIN_PIN) == 0;
+    std::lock_guard<std::mutex> lock(passwords_mutex);
+    return current_admin_pin == pin;
 }
 
 bool is_admin_card(const std::string& uid) {

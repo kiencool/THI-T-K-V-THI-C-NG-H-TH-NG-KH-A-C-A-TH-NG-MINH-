@@ -97,10 +97,6 @@ static void trigger_lock(int gpio, const char* name, bool active_high, int durat
                 (gpio == DELIVERY_BOX_GPIO && delivery_box_open)) break;
                 
             auto now = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
-            if (elapsed >= duration_sec) {
-                break; // Hết thời gian chờ, tự động khóa lại
-            }
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         

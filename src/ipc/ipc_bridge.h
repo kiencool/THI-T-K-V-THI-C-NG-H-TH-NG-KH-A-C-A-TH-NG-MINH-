@@ -16,7 +16,8 @@ namespace IpcBridge {
         LOCK_MAIN_DOOR,
         LOCK_DELIVERY_BOX,
         LOCK_ALL,
-        RELOAD_CARDS
+        RELOAD_CARDS,
+        RELOAD_PASSWORDS
     };
     
     WebCommand poll_web_command();

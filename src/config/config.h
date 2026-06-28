@@ -45,8 +45,7 @@ static const char* FLAG_PLAY_VIDEO = "/tmp/play_video";
 
 // === Authentication ===
 static const char* ADMIN_CARD_UID = "76 19 75 A6 BC";
-static const char* TENANT_PIN = "123456";
-static const char* ADMIN_PIN = "190104";
+static const char* PASSWORDS_FILE = "../data/passwords.txt";
 
 // === Driver Paths ===
 static const char* RFID_DRIVER_PATH = "python3 ../src/hal/rfid_driver.py";

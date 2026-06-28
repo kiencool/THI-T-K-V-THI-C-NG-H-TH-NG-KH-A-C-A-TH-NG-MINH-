@@ -93,13 +93,11 @@ socket.on('door_status', (data) => {
     if (data.status === 'unlocked') {
         el.textContent = 'Đang mở';
         el.style.color = 'var(--success-color)';
-        addEventLog('unlock', isMainDoor ? 'MAIN DOOR' : 'DELIVERY BOX', 'Đã mở khóa (App/Web/Mật khẩu)');
         if (isMainDoor) mainDoorOpen = true;
         else deliveryBoxOpen = true;
     } else {
         el.textContent = 'Đang khóa';
         el.style.color = 'inherit';
-        addEventLog('lock', isMainDoor ? 'MAIN DOOR' : 'DELIVERY BOX', 'Đã đóng khóa');
         if (isMainDoor) mainDoorOpen = false;
         else deliveryBoxOpen = false;
     }
@@ -114,8 +112,6 @@ socket.on('rfid_event', (data) => {
     if (data.event === 'rfid_enrolled') {
         msg = `Đã thêm thẻ mới: ${data.detail}`;
         addEventLog('success', 'Đăng ký thẻ', msg);
-    } else {
-        addEventLog('info', 'Quẹt thẻ', msg);
     }
 });
 
@@ -153,7 +149,6 @@ socket.on('system_event', (data) => {
 // Handle Face events
 socket.on('face_event', (data) => {
     console.log("Face event:", data);
-    addEventLog('face', 'Nhận diện', `Khuôn mặt: ${data.detail || 'Không rõ'}`);
 });
 
 // Handle raw logs
@@ -260,50 +255,30 @@ function loadRecentEvents() {
             
             if (data.history && data.history.length > 0) {
                 list.innerHTML = '';
-                const recent = data.history.slice(0, 15).reverse();
+                const recent = data.history.slice(0, 50).reverse();
+                let count = 0;
                 recent.forEach(item => {
-                    if (item.event === 'rfid_enrolled') return;
+                    if (count >= 15) return;
                     let type = 'info';
                     let title = 'Sự kiện';
                     let desc = item.detail || '';
-                    if (item.event === 'door_unlock') {
+                    if (item.event === 'physical_door_open') {
                         type = 'unlock';
                         title = item.detail && item.detail.includes('DELIVERY BOX') ? 'Tủ Nhận Đồ' : 'Cửa Chính';
-                        desc = 'Đã mở khóa (Web)';
-                    } else if (item.event === 'password_unlock') {
-                        type = 'unlock';
-                        title = item.detail && item.detail.includes('DELIVERY BOX') ? 'Tủ Nhận Đồ' : 'Cửa Chính';
-                        desc = 'Đã mở khóa (Mật khẩu)';
-                    } else if (item.event === 'door_lock') {
-                        type = 'lock';
-                        title = item.detail && item.detail.includes('DELIVERY BOX') ? 'Tủ Nhận Đồ' : 'Cửa Chính';
-                        desc = 'Đã đóng khóa';
-                    } else if (item.event === 'rfid_scan') {
-                        type = item.detail && item.detail.includes('matched=false') ? 'error' : 'rfid';
-                        title = 'Quẹt thẻ';
-                        let name = 'Không rõ';
-                        if (item.detail && item.detail.includes('time=')) name = item.detail.split('time=')[1].split(',')[0];
-                        desc = type === 'error' ? 'Thẻ RFID từ chối' : `Thẻ hợp lệ: ${name}`;
-                    } else if (item.event === 'face_recognized') {
-                        type = 'face';
-                        title = 'Nhận diện';
-                        desc = `Khuôn mặt: ${item.detail}`;
-                    } else if (item.event === 'physical_door_open') {
-                        type = 'unlock';
-                        title = item.detail && item.detail.includes('DELIVERY BOX') ? 'Tủ Nhận Đồ' : 'Cửa Chính';
-                        desc = 'Cửa đang mở';
+                        desc = 'Cửa đã được mở ra';
                     } else if (item.event === 'physical_door_close') {
                         type = 'lock';
                         title = item.detail && item.detail.includes('DELIVERY BOX') ? 'Tủ Nhận Đồ' : 'Cửa Chính';
-                        desc = 'Cửa đã khép lại';
-                    } else if (item.event === 'shipper_unlock') {
-                        type = 'unlock';
-                        title = 'Tủ Nhận Đồ';
-                        desc = `Shipper nhập mã: ${item.detail}`;
+                        desc = 'Cửa đã được khép lại';
+                    } else if (item.event === 'rfid_enrolled') {
+                        type = 'success';
+                        title = 'Đăng ký thẻ';
+                        desc = `Đã thêm thẻ mới: ${item.detail}`;
                     } else {
                         return;
                     }
                     addEventLog(type, title, desc, item.timestamp);
+                    count++;
                 });
             }
         });
@@ -397,13 +372,15 @@ function loadCards() {
             if (data.cards && data.cards.length > 0) {
                 tbody.innerHTML = '';
                 data.cards.forEach(card => {
+                    const nameDisplay = card.name ? card.name : '<span style="color:var(--text-secondary);font-style:italic;">Chưa đặt tên</span>';
                     const tr = document.createElement('tr');
                     tr.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
                     tr.innerHTML = `
                         <td style="padding: 10px;">${card.time}</td>
+                        <td style="padding: 10px; font-weight: bold;">${nameDisplay}</td>
                         <td style="padding: 10px; font-family: monospace;">${card.uid}</td>
                         <td style="padding: 10px; text-align: right;">
-                            <button class="btn btn-sm" style="background: var(--primary-color);" onclick="editCard('${card.uid}', '${card.time}')">
+                            <button class="btn btn-sm" style="background: var(--primary-color);" onclick="editCard('${card.uid}', '${card.name}')">
                                 <i class="fas fa-edit"></i> Sửa tên
                             </button>
                             <button class="btn btn-sm" style="background: var(--danger-color);" onclick="deleteCard('${card.uid}')">
@@ -414,7 +391,7 @@ function loadCards() {
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="3" style="padding: 10px; text-align: center;">Chưa có thẻ nào được cấp</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center;">Chưa có thẻ nào được cấp</td></tr>';
             }
         })
         .catch(err => console.error(err));
@@ -458,8 +435,221 @@ function deleteCard(uid) {
     .catch(err => console.error(err));
 }
 
-// Load cards automatically when opening the Users tab
-document.querySelector('[data-tab="users"]').addEventListener('click', loadCards);
+// Load cards and faces automatically when opening the Users tab
+document.querySelector('[data-tab="users"]').addEventListener('click', () => {
+    loadCards();
+    loadFaces();
+});
+
+// --- FACE MANAGEMENT ---
+function loadFaces() {
+    fetch('/api/faces?t=' + new Date().getTime(), { cache: 'no-store' })
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('faces-table-body');
+            if (data.faces && data.faces.length > 0) {
+                tbody.innerHTML = '';
+                data.faces.forEach(face => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+                    tr.innerHTML = `
+                        <td style="padding: 10px; font-family: monospace;">FACE_${face.id}</td>
+                        <td style="padding: 10px; font-weight: bold;">${face.name}</td>
+                        <td style="padding: 10px; text-align: right;">
+                            <button class="btn btn-sm" style="background: var(--primary-color);" onclick="editFace(${face.id}, '${face.name}')">
+                                <i class="fas fa-edit"></i> Sửa tên
+                            </button>
+                            <button class="btn btn-sm" style="background: var(--danger-color);" onclick="deleteFace(${face.id})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 10px; text-align: center;">Chưa có khuôn mặt nào được đăng ký</td></tr>';
+            }
+        })
+        .catch(err => console.error(err));
+}
+
+function editFace(id, currentName) {
+    const newName = prompt('Nhập tên người dùng cho Khuôn mặt FACE_' + id + ':', currentName);
+    if (newName && newName.trim() !== '') {
+        fetch('/api/faces/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('Thành công', data.message);
+                loadFaces();
+            } else {
+                showToast('Lỗi', data.message, true);
+            }
+        });
+    }
+}
+
+function deleteFace(id) {
+    if (!confirm('Bạn có chắc chắn muốn xóa khuôn mặt FACE_' + id + '? (Hành động này không thể hoàn tác)')) return;
+    
+    fetch('/api/faces/' + id, {
+        method: 'DELETE'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Thành công', data.message);
+            loadFaces();
+        } else {
+            showToast('Lỗi', data.message, true);
+        }
+    })
+    .catch(err => console.error(err));
+}
+
+// --- SETTINGS MANAGEMENT ---
+function changePassword(event, type) {
+    event.preventDefault();
+    const form = event.target;
+    const old_password = form.old_password.value;
+    const new_password = form.new_password.value;
+    const confirm_password = form.confirm_password.value;
+    
+    if (new_password !== confirm_password) {
+        showToast('Lỗi', 'Mật khẩu xác nhận không khớp!', true);
+        return;
+    }
+    
+    // For door PINs, validate they are numeric and 6 digits
+    if (type === 'door_main' || type === 'door_admin') {
+        if (!/^\d{6}$/.test(new_password)) {
+            showToast('Lỗi', 'Mã PIN màn hình phải bao gồm đúng 6 chữ số!', true);
+            return;
+        }
+    }
+    
+    fetch('/api/settings/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, old_password, new_password })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Thành công', data.message);
+            form.reset();
+        } else {
+            showToast('Lỗi', data.message, true);
+        }
+    })
+    .catch(err => {
+        showToast('Lỗi', 'Không thể kết nối đến máy chủ', true);
+        console.error(err);
+    });
+}
+
+// ==========================================
+// MESSAGES TAB LOGIC
+// ==========================================
+function loadMessages() {
+    fetch('/api/messages')
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const tbody = document.getElementById('messages-list');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (data.messages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 15px;">Không có lời nhắn nào</td></tr>';
+                return;
+            }
+            
+            data.messages.forEach(msg => {
+                const date = new Date(msg.time * 1000).toLocaleString();
+                const sizeMB = (msg.size / (1024 * 1024)).toFixed(2) + ' MB';
+                
+                // Parse filename: Sender-to-Recipient_Timestamp.mp4 or Recipient_Timestamp.mp4
+                let recipient = "Unknown";
+                let sender = "Khách";
+                const parts = msg.filename.split('_');
+                if (parts.length >= 2) {
+                    const names = parts[0].split('-to-');
+                    if (names.length >= 2) {
+                        sender = names[0];
+                        recipient = names[1];
+                    } else {
+                        recipient = parts[0];
+                    }
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 12px 15px;">${date}</td>
+                    <td style="padding: 12px 15px; font-weight: 500; color: #f3f4f6;">${sender}</td>
+                    <td style="padding: 12px 15px; font-weight: 500; color: var(--primary-color);">${recipient}</td>
+                    <td style="padding: 12px 15px; text-align: center;">${sizeMB}</td>
+                    <td style="padding: 12px 15px; text-align: center;">
+                        <button class="btn btn-sm" style="background: var(--success-color);" onclick="playVideoMessage('${msg.filename}')">
+                            <i class="fas fa-play"></i> Xem
+                        </button>
+                        <button class="btn btn-sm btn-danger" style="margin-left: 5px;" onclick="deleteMessage('${msg.filename}')">
+                            <i class="fas fa-trash"></i> Xóa
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    })
+    .catch(err => console.error('Lỗi khi tải danh sách lời nhắn:', err));
+}
+
+function playVideoMessage(filename) {
+    const modal = document.getElementById('video-modal');
+    const player = document.getElementById('video-player');
+    const title = document.getElementById('video-modal-title');
+    
+    title.textContent = "Lời nhắn: " + filename;
+    player.src = '/messages/' + encodeURIComponent(filename);
+    modal.style.display = 'flex';
+    player.play().catch(e => console.log("Auto-play prevented", e));
+}
+
+function closeVideoModal() {
+    const modal = document.getElementById('video-modal');
+    const player = document.getElementById('video-player');
+    player.pause();
+    player.src = '';
+    modal.style.display = 'none';
+}
+
+function deleteMessage(filename) {
+    if (!confirm('Bạn có chắc chắn muốn xóa lời nhắn này?')) return;
+    
+    fetch('/api/messages/' + encodeURIComponent(filename), {
+        method: 'DELETE'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Thành công', 'Đã xóa lời nhắn');
+            loadMessages();
+        } else {
+            showToast('Lỗi', data.message || 'Không thể xóa lời nhắn', true);
+        }
+    })
+    .catch(err => showToast('Lỗi', 'Lỗi kết nối: ' + err, true));
+}
+
+// Add event listener to load messages when tab is clicked
+document.querySelector('a[data-tab="messages"]').addEventListener('click', () => {
+    loadMessages();
+});
 
 // --- AUTHENTICATION ---
 let currentRole = null;
@@ -597,17 +787,27 @@ function loadTenantHistory(btn = null) {
                         const tr = document.createElement('tr');
                         tr.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
                         const date = new Date(item.timestamp * 1000).toLocaleString('vi-VN');
+                        
+                        let code = item.detail;
+                        let creator = 'Không rõ';
+                        if (item.detail && item.detail.includes('|')) {
+                            let parts = item.detail.split('|');
+                            code = parts[0];
+                            creator = parts[1];
+                        }
+                        
                         tr.innerHTML = `
                             <td style="padding: 10px;">${date}</td>
-                            <td style="padding: 10px; font-weight: bold; color: var(--success-color);">${item.detail || ''}</td>
+                            <td style="padding: 10px; font-weight: bold; color: var(--success-color); text-align: center;">${code}</td>
+                            <td style="padding: 10px; font-weight: bold; text-align: right;">${creator}</td>
                         `;
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="2" style="padding: 10px; text-align: center;">Chưa có lịch sử Shipper</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="3" style="padding: 10px; text-align: center;">Chưa có lịch sử Shipper</td></tr>';
                 }
             } else {
-                tbody.innerHTML = '<tr><td colspan="2" style="padding: 10px; text-align: center;">Chưa có lịch sử Shipper</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 10px; text-align: center;">Chưa có lịch sử Shipper</td></tr>';
             }
         });
 }

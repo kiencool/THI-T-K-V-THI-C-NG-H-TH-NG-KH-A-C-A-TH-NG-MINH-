@@ -14,15 +14,34 @@ from flask_cors import CORS
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.config.config import (
     LOG_FILE, EVENTS_FILE, CARDS_FILE, DELIVERY_CODES_FILE,
-    HISTORY_FILE, WEB_COMMAND_FILE, DOOR_STATUS_FILE
+    HISTORY_FILE, WEB_COMMAND_FILE, DOOR_STATUS_FILE, DATASET_FILE, MESSAGES_DIR
 )
 
 app = Flask(__name__, static_folder='.')
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=60, ping_interval=25)
 
-ADMIN_PASSWORD = "1"
-TENANT_PASSWORD = "1"
+PASSWORDS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'passwords.txt')
+
+def load_passwords():
+    pwds = {
+        "WEB_ADMIN": "1",
+        "WEB_TENANT": "1",
+        "DOOR_MAIN": "123456",
+        "DOOR_ADMIN": "190104"
+    }
+    if os.path.exists(PASSWORDS_FILE):
+        try:
+            with open(PASSWORDS_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and '|' in line:
+                        k, v = line.split('|', 1)
+                        pwds[k.strip()] = v.strip()
+        except Exception:
+            pass
+    return pwds
 
 def send_web_command(cmd):
     try:
@@ -47,9 +66,11 @@ def login():
     password = data.get("password", "")
     role = data.get("role", "admin")
     
-    if role == "admin" and password == ADMIN_PASSWORD:
+    pwds = load_passwords()
+    
+    if role == "admin" and password == pwds.get("WEB_ADMIN", "1"):
         return jsonify({"status": "success", "token": "admin_token"})
-    elif role == "tenant" and password == TENANT_PASSWORD:
+    elif role == "tenant" and password == pwds.get("WEB_TENANT", "1"):
         return jsonify({"status": "success", "token": "tenant_token"})
     return jsonify({"status": "error", "message": "Sai mật khẩu"}), 401
 
@@ -69,12 +90,21 @@ def edit_card(uid):
             for line in f:
                 line = line.strip()
                 if line and '|' in line:
-                    c_uid, c_name = line.split('|', 1)
-                    if c_uid.strip().upper() == uid:
-                        found = True
-                        new_lines.append(f"{uid}|{new_name}\n")
+                    parts = line.split('|')
+                    c_uid = parts[0].strip()
+                    c_time = parts[1].strip() if len(parts) > 1 else ""
+                    # if c_time is not a date (e.g. legacy data), move it to name
+                    if c_time and "-" not in c_time:
+                        c_name = c_time
+                        c_time = "2026-06-28 00:00:00"
                     else:
-                        new_lines.append(line + "\n")
+                        c_name = parts[2].strip() if len(parts) > 2 else ""
+
+                    if c_uid.upper() == uid:
+                        found = True
+                        new_lines.append(f"{uid}|{c_time}|{new_name}\n")
+                    else:
+                        new_lines.append(f"{c_uid}|{c_time}|{c_name}\n")
                         
     if found:
         with open(CARDS_FILE, 'w', encoding='utf-8') as f:
@@ -139,6 +169,51 @@ def delete_delivery_code(code):
     else:
         return jsonify({"status": "error", "message": "Không tìm thấy mã"}), 404
 
+@app.route('/api/settings/password', methods=['PUT'])
+def change_password():
+    data = request.json
+    pwd_type = data.get("type", "")
+    old_pwd = data.get("old_password", "")
+    new_pwd = data.get("new_password", "")
+    
+    if not pwd_type or not new_pwd:
+        return jsonify({"status": "error", "message": "Dữ liệu không hợp lệ"}), 400
+        
+    pwds = load_passwords()
+    
+    # Map from UI type to File Key
+    key_map = {
+        "web_admin": "WEB_ADMIN",
+        "web_tenant": "WEB_TENANT",
+        "door_main": "DOOR_MAIN",
+        "door_admin": "DOOR_ADMIN"
+    }
+    
+    if pwd_type not in key_map:
+        return jsonify({"status": "error", "message": "Loại mật khẩu không đúng"}), 400
+        
+    file_key = key_map[pwd_type]
+    
+    if pwds.get(file_key) != old_pwd:
+        return jsonify({"status": "error", "message": "Mật khẩu cũ không chính xác!"}), 401
+        
+    # Update dictionary
+    pwds[file_key] = new_pwd
+    
+    # Save back to file
+    try:
+        with open(PASSWORDS_FILE, 'w', encoding='utf-8') as f:
+            for k, v in pwds.items():
+                f.write(f"{k}|{v}\n")
+        
+        # Signal C++ app to reload if door passwords changed
+        if file_key.startswith("DOOR_"):
+            send_web_command("RELOAD_PASSWORDS")
+            
+        return jsonify({"status": "success", "message": "Đã cập nhật mật khẩu thành công!"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Lỗi hệ thống: {str(e)}"}), 500
+
 @app.route('/api/history', methods=['GET', 'DELETE'])
 def get_history():
     if request.method == 'DELETE':
@@ -182,11 +257,11 @@ def get_status():
     main_door = "locked"
     delivery_box = "locked"
     try:
-        if os.path.exists(DOOR_STATUS_FILE):
-            with open(DOOR_STATUS_FILE, "r") as f:
+        if os.path.exists("/tmp/door_status_web.json"):
+            with open("/tmp/door_status_web.json", "r") as f:
                 data = json.load(f)
-                main_door = "open" if data.get("main_door", False) else "locked"
-                delivery_box = "open" if data.get("delivery_box", False) else "locked"
+                main_door = data.get("main_door", "locked")
+                delivery_box = data.get("delivery_box", "locked")
     except Exception:
         pass
 
@@ -205,8 +280,17 @@ def get_cards():
             for line in f:
                 line = line.strip()
                 if line and '|' in line:
-                    uid, time_added = line.split('|', 1)
-                    cards.append({"uid": uid.strip(), "time": time_added.strip()})
+                    parts = line.split('|')
+                    uid = parts[0].strip()
+                    time_added = parts[1].strip() if len(parts) > 1 else ""
+                    # Data migration for legacy
+                    if time_added and "-" not in time_added:
+                        name = time_added
+                        time_added = "Unknown"
+                    else:
+                        name = parts[2].strip() if len(parts) > 2 else ""
+                        
+                    cards.append({"uid": uid, "time": time_added, "name": name})
     return jsonify({"status": "success", "cards": cards})
 
 @app.route('/api/cards', methods=['POST'])
@@ -223,12 +307,15 @@ def add_card():
             for line in f:
                 line = line.strip()
                 if line and '|' in line:
-                    c_uid, c_name = line.split('|', 1)
-                    if c_uid.strip().upper() == uid:
+                    parts = line.split('|')
+                    c_uid = parts[0].strip()
+                    if c_uid.upper() == uid:
                         return jsonify({"status": "error", "message": "Thẻ này đã tồn tại"}), 400
                     
+    from datetime import datetime
+    time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(CARDS_FILE, 'a', encoding='utf-8') as f:
-        f.write(f"{uid}|{name}\n")
+        f.write(f"{uid}|{time_str}|{name}\n")
         
     send_web_command("RELOAD_CARDS")
     return jsonify({"status": "success", "message": "Đã thêm thẻ thành công"})
@@ -244,11 +331,12 @@ def delete_card(uid):
             for line in f:
                 line = line.strip()
                 if line and '|' in line:
-                    c_uid, c_name = line.split('|', 1)
-                    if c_uid.strip().upper() == uid:
+                    parts = line.split('|')
+                    c_uid = parts[0].strip()
+                    if c_uid.upper() == uid:
                         found = True
-                        continue
-                    new_lines.append(line + "\n")
+                    else:
+                        new_lines.append(line + "\n")
                     
     if found:
         with open(CARDS_FILE, 'w', encoding='utf-8') as f:
@@ -258,6 +346,102 @@ def delete_card(uid):
         return jsonify({"status": "success", "message": "Đã xóa thẻ"})
     else:
         return jsonify({"status": "error", "message": "Không tìm thấy thẻ"}), 404
+
+@app.route('/api/faces', methods=['GET'])
+def get_faces():
+    faces = []
+    if os.path.exists(DATASET_FILE):
+        try:
+            import pickle
+            with open(DATASET_FILE, 'rb') as f:
+                data = pickle.load(f)
+                names = data.get("names", [])
+                for i, name in enumerate(names):
+                    faces.append({"id": i, "name": name})
+        except Exception as e:
+            print("Error loading faces:", e)
+    return jsonify({"status": "success", "faces": faces})
+
+@app.route('/api/faces/<int:face_id>', methods=['PUT'])
+def edit_face(face_id):
+    data_payload = request.json
+    new_name = data_payload.get("name", "").strip()
+    
+    if not new_name:
+        return jsonify({"status": "error", "message": "Tên không được để trống"}), 400
+        
+    if os.path.exists(DATASET_FILE):
+        try:
+            import pickle
+            with open(DATASET_FILE, 'rb') as f:
+                data = pickle.load(f)
+            
+            if 0 <= face_id < len(data.get("names", [])):
+                data["names"][face_id] = new_name
+                with open(DATASET_FILE, 'wb') as f:
+                    pickle.dump(data, f)
+                return jsonify({"status": "success", "message": "Đã đổi tên khuôn mặt"})
+            else:
+                return jsonify({"status": "error", "message": "Không tìm thấy khuôn mặt"}), 404
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Lỗi hệ thống: {e}"}), 500
+    return jsonify({"status": "error", "message": "Dữ liệu chưa khởi tạo"}), 404
+
+@app.route('/api/faces/<int:face_id>', methods=['DELETE'])
+def delete_face(face_id):
+    if os.path.exists(DATASET_FILE):
+        try:
+            import pickle
+            with open(DATASET_FILE, 'rb') as f:
+                data = pickle.load(f)
+            
+            names = data.get("names", [])
+            encodings = data.get("encodings", [])
+            
+            if 0 <= face_id < len(names):
+                del names[face_id]
+                if face_id < len(encodings):
+                    del encodings[face_id]
+                
+                with open(DATASET_FILE, 'wb') as f:
+                    pickle.dump({"names": names, "encodings": encodings}, f)
+                return jsonify({"status": "success", "message": "Đã xóa khuôn mặt"})
+            else:
+                return jsonify({"status": "error", "message": "Không tìm thấy khuôn mặt"}), 404
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Lỗi hệ thống: {e}"}), 500
+    return jsonify({"status": "error", "message": "Dữ liệu chưa khởi tạo"}), 404
+
+@app.route('/messages/<path:filename>')
+def serve_message_file(filename):
+    return send_from_directory(MESSAGES_DIR, filename)
+
+@app.route('/api/messages', methods=['GET'])
+def get_messages():
+    messages = []
+    if os.path.exists(MESSAGES_DIR):
+        for f in os.listdir(MESSAGES_DIR):
+            if f.endswith('.avi') or f.endswith('.mp4'):
+                path = os.path.join(MESSAGES_DIR, f)
+                stat = os.stat(path)
+                messages.append({
+                    "filename": f,
+                    "size": stat.st_size,
+                    "time": stat.st_mtime
+                })
+        messages.sort(key=lambda x: x['time'], reverse=True)
+    return jsonify({"status": "success", "messages": messages})
+
+@app.route('/api/messages/<filename>', methods=['DELETE'])
+def delete_message(filename):
+    path = os.path.join(MESSAGES_DIR, filename)
+    if os.path.exists(path) and path.startswith(MESSAGES_DIR):
+        try:
+            os.remove(path)
+            return jsonify({"status": "success", "message": "Đã xóa lời nhắn"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "error", "message": "Không tìm thấy file"}), 404
 
 @app.route('/api/logs')
 def get_logs():

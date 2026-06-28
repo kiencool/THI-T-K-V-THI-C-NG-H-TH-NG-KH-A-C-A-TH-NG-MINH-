@@ -49,6 +49,8 @@ def main():
             # Xử lý Cửa chính (có Debounce)
             if last_main is None:
                 last_main = main_state
+                state_str = "OPEN" if main_state == 1 else "CLOSED"
+                print(f"SENSOR:MAIN_DOOR:{state_str}", flush=True)
             elif main_state != last_main:
                 main_consecutive += 1
                 if main_consecutive >= DEBOUNCE_THRESHOLD:
@@ -62,6 +64,8 @@ def main():
             # Xử lý Tủ đồ (có Debounce)
             if last_delivery is None:
                 last_delivery = delivery_state
+                state_str = "OPEN" if delivery_state == 1 else "CLOSED"
+                print(f"SENSOR:DELIVERY_BOX:{state_str}", flush=True)
             elif delivery_state != last_delivery:
                 delivery_consecutive += 1
                 if delivery_consecutive >= DEBOUNCE_THRESHOLD:

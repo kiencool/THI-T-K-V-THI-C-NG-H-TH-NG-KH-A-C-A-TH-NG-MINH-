@@ -209,7 +209,20 @@ def record_video():
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     temp_video = os.path.join(MESSAGES_DIR, f"temp_vid_{timestamp}.avi")
     temp_audio = os.path.join(MESSAGES_DIR, f"temp_aud_{timestamp}.wav")
-    final_video = os.path.join(MESSAGES_DIR, f"msg_{timestamp}.avi")
+    
+    recipient = "Msg"
+    try:
+        with open(FLAG_RECORD_START, "r") as f:
+            content = f.read().strip()
+            if content:
+                import re
+                safe_recipient = re.sub(r'[^a-zA-Z0-9_\-]', '', content)
+                if safe_recipient:
+                    recipient = safe_recipient
+    except:
+        pass
+        
+    final_video = os.path.join(MESSAGES_DIR, f"{recipient}_{timestamp}.mp4")
 
     out = cv2.VideoWriter(temp_video, fourcc, VIDEO_FPS, (VIDEO_WIDTH, VIDEO_HEIGHT))
 
@@ -238,17 +251,19 @@ def record_video():
     audio_proc.terminate()
     audio_proc.wait()
 
-    # --- GHÉP HÌNH VÀ TIẾNG ---
-    print("[VIDEO] Merging audio and video...", flush=True)
+    # --- GHÉP HÌNH VÀ TIẾNG SANG MP4 ---
+    print("[VIDEO] Encoding to MP4...", flush=True)
     if os.path.exists(temp_audio) and os.path.getsize(temp_audio) > 0:
-        merge_cmd = f"ffmpeg -y -i {temp_video} -i {temp_audio} -c:v copy -c:a aac {final_video} > /dev/null 2>&1"
+        merge_cmd = f"ffmpeg -y -i {temp_video} -i {temp_audio} -c:v libx264 -preset fast -pix_fmt yuv420p -c:a aac {final_video} > /dev/null 2>&1"
         subprocess.run(merge_cmd, shell=True)
 
-    # KIỂM TRA BẢO VỆ: Nếu ghép thất bại -> Giữ lại video gốc
+    # KIỂM TRA BẢO VỆ: Nếu ghép thất bại -> Lưu không tiếng
     if not os.path.exists(final_video):
         print("[VIDEO] Audio/Merge failed! Saving raw video without sound...", flush=True)
         if os.path.exists(temp_video):
-            os.rename(temp_video, final_video)
+            subprocess.run(f"ffmpeg -y -i {temp_video} -c:v libx264 -preset fast -pix_fmt yuv420p {final_video} > /dev/null 2>&1", shell=True)
+            if not os.path.exists(final_video):
+                os.rename(temp_video, final_video.replace('.mp4', '.avi'))
 
     # Dọn dẹp file nháp
     if os.path.exists(temp_video):

@@ -12,6 +12,7 @@ struct Card {
 // Dịch vụ xác thực: quản lý thẻ RFID, mã PIN, quyền admin
 namespace AuthService {
     void load_registered_cards();
+    void load_passwords();
     bool find_card(const std::string& uid, std::string& time_added);
     void enroll_card(const std::string& uid);
     bool verify_tenant_pin(const char* pin);

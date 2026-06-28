@@ -71,6 +71,9 @@
                 <a href="#delivery" data-tab="delivery" class="tenant-only" style="display:none;">
                     <i class="fas fa-box-open"></i> Mã Giao Hàng
                 </a>
+                <a href="#messages" data-tab="messages" class="tenant-only" style="display:none;">
+                    <i class="fas fa-video"></i> Lời nhắn
+                </a>
             </div>
 
             <div class="connection-status offline" id="conn-status">
@@ -143,7 +146,10 @@
                 <div class="recent-events">
                     <div class="section-header">
                         <h3>Sự kiện gần đây</h3>
-                        <button class="btn btn-sm" onclick="clearLogs()">Xóa</button>
+                        <div>
+                            <button class="btn btn-sm" style="margin-right: 5px; background: var(--surface-color); border: 1px solid var(--border-color);" onclick="loadRecentEvents(); animateRefreshButton(this);"><i class="fas fa-sync-alt"></i> Làm mới</button>
+                            <button class="btn btn-sm" onclick="clearLogs()"><i class="fas fa-trash"></i> Xóa</button>
+                        </div>
                     </div>
                     <div class="event-list" id="event-list">
                         <!-- Events will be populated by JS -->
@@ -235,13 +241,37 @@
                         <div class="card-list-container" style="margin-top: 15px; max-height: 400px; overflow-y: auto;">
                             <table style="width: 100%; border-collapse: collapse; text-align: left;">
                                 <thead>
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <tr>
                                         <th style="padding: 10px;">Thời gian cấp</th>
+                                        <th style="padding: 10px;">Tên người dùng</th>
                                         <th style="padding: 10px;">Mã UID</th>
                                         <th style="padding: 10px; text-align: right;">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cards-table-body">
+                                    <tr><td colspan="4" style="padding: 10px; text-align: center;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Face List -->
+                    <div class="control-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3><i class="fas fa-user-circle"></i> Danh sách khuôn mặt đã cập nhật</h3>
+                            <button class="btn btn-sm" onclick="loadFaces()"><i class="fas fa-sync"></i> Làm mới</button>
+                        </div>
+                        <p>Danh sách các khuôn mặt đã đăng ký nhận diện. Bạn có thể đổi tên để dễ quản lý.</p>
+                        <div class="card-list-container" style="margin-top: 15px; max-height: 400px; overflow-y: auto;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                        <th style="padding: 10px;">ID Khuôn Mặt</th>
+                                        <th style="padding: 10px;">Tên Người Dùng</th>
+                                        <th style="padding: 10px; text-align: right;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="faces-table-body">
                                     <tr><td colspan="3" style="padding: 10px; text-align: center;">Đang tải...</td></tr>
                                 </tbody>
                             </table>
@@ -251,10 +281,56 @@
             </div>
 
             <div class="tab-content" id="tab-settings">
-                <div class="empty-state">
-                    <i class="fas fa-cog"></i>
-                    <h3>Cài đặt hệ thống</h3>
-                    <p>Tính năng đang được phát triển</p>
+                <div class="users-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    
+                    <!-- Web Admin Password -->
+                    <div class="control-card">
+                        <h3><i class="fas fa-shield-alt"></i> Đăng nhập Web (Chủ trọ)</h3>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Tài khoản cao nhất quản lý toàn bộ hệ thống qua Web.</p>
+                        <form onsubmit="changePassword(event, 'web_admin')" style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="password" name="old_password" placeholder="Mật khẩu cũ" required class="form-input">
+                            <input type="password" name="new_password" placeholder="Mật khẩu mới" required class="form-input">
+                            <input type="password" name="confirm_password" placeholder="Xác nhận mật khẩu mới" required class="form-input">
+                            <button type="submit" class="btn btn-primary" style="margin-top: 5px;"><i class="fas fa-save"></i> Đổi mật khẩu</button>
+                        </form>
+                    </div>
+
+                    <!-- Web Tenant Password -->
+                    <div class="control-card">
+                        <h3><i class="fas fa-user"></i> Đăng nhập Web (Người ở trọ)</h3>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Tài khoản cấp thấp chỉ xem lịch sử và mở cửa.</p>
+                        <form onsubmit="changePassword(event, 'web_tenant')" style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="password" name="old_password" placeholder="Mật khẩu cũ" required class="form-input">
+                            <input type="password" name="new_password" placeholder="Mật khẩu mới" required class="form-input">
+                            <input type="password" name="confirm_password" placeholder="Xác nhận mật khẩu mới" required class="form-input">
+                            <button type="submit" class="btn btn-primary" style="margin-top: 5px;"><i class="fas fa-save"></i> Đổi mật khẩu</button>
+                        </form>
+                    </div>
+
+                    <!-- Door Main PIN -->
+                    <div class="control-card">
+                        <h3><i class="fas fa-door-closed"></i> PIN Mở Khóa Cửa (Màn hình)</h3>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Mật khẩu nhập trên màn hình LCD để mở cửa chính.</p>
+                        <form onsubmit="changePassword(event, 'door_main')" style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="password" name="old_password" placeholder="Mật khẩu cũ (PIN)" required class="form-input">
+                            <input type="password" name="new_password" placeholder="Mật khẩu mới (PIN)" required class="form-input">
+                            <input type="password" name="confirm_password" placeholder="Xác nhận mật khẩu mới" required class="form-input">
+                            <button type="submit" class="btn btn-primary" style="margin-top: 5px;"><i class="fas fa-save"></i> Đổi mật khẩu</button>
+                        </form>
+                    </div>
+
+                    <!-- Door Admin PIN -->
+                    <div class="control-card">
+                        <h3><i class="fas fa-cogs"></i> PIN Quản Trị (Màn hình)</h3>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Mật khẩu để vào Menu ẩn trên màn hình thiết bị.</p>
+                        <form onsubmit="changePassword(event, 'door_admin')" style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="password" name="old_password" placeholder="Mật khẩu cũ (PIN)" required class="form-input">
+                            <input type="password" name="new_password" placeholder="Mật khẩu mới (PIN)" required class="form-input">
+                            <input type="password" name="confirm_password" placeholder="Xác nhận mật khẩu mới" required class="form-input">
+                            <button type="submit" class="btn btn-primary" style="margin-top: 5px;"><i class="fas fa-save"></i> Đổi mật khẩu</button>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
@@ -288,18 +364,60 @@
                     </div>
 
                     <div style="margin-top: 30px;">
-                        <h4><i class="fas fa-history"></i> Lịch sử Shipper mở tủ:</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0;"><i class="fas fa-history"></i> Lịch sử Shipper mở tủ:</h4>
+                            <button class="btn btn-sm" style="background: var(--surface-color); border: 1px solid var(--border-color);" onclick="loadTenantHistory(); animateRefreshButton(this);"><i class="fas fa-sync-alt"></i> Làm mới</button>
+                        </div>
                         <table style="width: 100%; margin-top: 10px; text-align: left; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                                     <th style="padding: 10px;">Thời gian</th>
-                                    <th style="padding: 10px;">Mã đã dùng</th>
+                                    <th style="padding: 10px; text-align: center;">Mã đã dùng</th>
+                                    <th style="padding: 10px; text-align: right;">Người tạo</th>
                                 </tr>
                             </thead>
                             <tbody id="tenant-history-body">
-                                <tr><td colspan="2" style="padding: 10px; text-align: center;">Chưa có lịch sử Shipper</td></tr>
+                                <tr><td colspan="3" style="padding: 10px; text-align: center;">Chưa có lịch sử Shipper</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Tab -->
+            <div class="tab-content" id="tab-messages">
+                <div class="section-header">
+                    <h3><i class="fas fa-video"></i> Danh sách Lời nhắn Video</h3>
+                    <button class="btn btn-sm" onclick="loadMessages()" style="background: var(--primary-color);"><i class="fas fa-sync"></i> Làm mới</button>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left; padding: 12px 15px;">Thời gian</th>
+                                    <th style="text-align: left; padding: 12px 15px;">Người gửi</th>
+                                    <th style="text-align: left; padding: 12px 15px;">Người nhận</th>
+                                    <th style="text-align: center; padding: 12px 15px;">Dung lượng</th>
+                                    <th style="text-align: center; padding: 12px 15px;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="messages-list">
+                                <!-- Messages will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Video Player Modal -->
+                <div id="video-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: #1f2937; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; text-align: center; position: relative;">
+                        <h3 id="video-modal-title" style="margin-top: 0; margin-bottom: 15px; color: #f3f4f6;">Video Message</h3>
+                        <video id="video-player" controls style="width: 100%; max-height: 60vh; background: #000; border-radius: 4px;"></video>
+                        <div style="margin-top: 15px;">
+                            <button class="btn" style="background: var(--danger-color);" onclick="closeVideoModal()">Đóng</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -316,6 +434,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=22"></script>
 </body>
 </html>

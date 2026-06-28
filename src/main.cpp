@@ -32,6 +32,7 @@ int main(void) {
     // 2. Khởi tạo LVGL
     lv_init();
     AuthService::load_registered_cards();
+    AuthService::load_passwords();
     LockController::reset_all_locks();
 
     // 3. Đăng ký signal handler
@@ -107,6 +108,9 @@ int main(void) {
                 break;
             case IpcBridge::WebCommand::RELOAD_CARDS:
                 AuthService::load_registered_cards();
+                break;
+            case IpcBridge::WebCommand::RELOAD_PASSWORDS:
+                AuthService::load_passwords();
                 break;
             default: break;
         }

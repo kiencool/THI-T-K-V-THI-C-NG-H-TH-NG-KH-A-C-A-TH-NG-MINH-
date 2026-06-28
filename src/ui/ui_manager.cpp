@@ -48,8 +48,16 @@ static lv_obj_t* btn_setup_card = nullptr;
 static lv_obj_t* btn_setup_face = nullptr;
 static lv_obj_t* btn_view_msg = nullptr;
 
-static int auth_step = 0;
+static char msg_recipient[64] = "Msg";
+static char msg_sender[64] = "Khach";
+static lv_obj_t* recipient_ta = nullptr;
+static lv_obj_t* sender_ta = nullptr;
+static void prompt_recipient_popup();
+
 static bool is_tenant_menu = false;
+static bool is_settings_menu = false;
+
+static int auth_step = 0;
 
 // ==================== FORWARD DECLARATIONS ====================
 static void user_activity_poke();
@@ -159,7 +167,7 @@ void create_message_list_popup() {
     DIR* dir; struct dirent* ent;
     if ((dir = opendir(MESSAGES_DIR)) != NULL) {
         while ((ent = readdir(dir)) != NULL) {
-            if (strstr(ent->d_name, ".avi")) {
+            if (strstr(ent->d_name, ".avi") || strstr(ent->d_name, ".mp4")) {
                 lv_obj_t* btn = (lv_obj_t*)lv_list_add_btn(list, LV_SYMBOL_PLAY, ent->d_name);
                 lv_obj_add_event_cb(btn, play_video_event_cb, LV_EVENT_CLICKED, NULL);
             }
@@ -201,7 +209,117 @@ void create_record_popup() {
     lv_label_set_text(lbl, "STOP & SAVE");
     lv_obj_center(lbl);
     lv_obj_add_event_cb(btn_stop, stop_record_cb, LV_EVENT_CLICKED, NULL);
-    IpcBridge::create_flag_file(FLAG_RECORD_START);
+    FILE* f = fopen(FLAG_RECORD_START, "w");
+    if (f) {
+        char combined[128];
+        snprintf(combined, sizeof(combined), "%s-to-%s", msg_sender, msg_recipient);
+        fputs(combined, f);
+        fclose(f);
+    }
+}
+
+static void start_record_btn_cb(lv_event_t* e) {
+    if (recipient_ta) {
+        const char* txt = lv_textarea_get_text(recipient_ta);
+        if (strlen(txt) > 0) {
+            strncpy(msg_recipient, txt, sizeof(msg_recipient)-1);
+        } else {
+            strcpy(msg_recipient, "Msg");
+        }
+    }
+    close_current_popup();
+    create_record_popup();
+}
+
+static void start_recipient_btn_cb(lv_event_t* e) {
+    if (sender_ta) {
+        const char* txt = lv_textarea_get_text(sender_ta);
+        if (strlen(txt) > 0) {
+            strncpy(msg_sender, txt, sizeof(msg_sender)-1);
+        } else {
+            strcpy(msg_sender, "Khach");
+        }
+    }
+    close_current_popup();
+    prompt_recipient_popup();
+}
+
+static void prompt_sender_popup() {
+    user_activity_poke();
+    if (active_popup != nullptr) close_current_popup();
+
+    active_popup = (lv_obj_t*)lv_obj_create(right_panel);
+    lv_obj_set_size(active_popup, 280, 440);
+    lv_obj_align(active_popup, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_t* title = (lv_obj_t*)lv_label_create(active_popup);
+    lv_label_set_text(title, "Ai la nguoi gui?");
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
+
+    sender_ta = (lv_obj_t*)lv_textarea_create(active_popup);
+    lv_obj_set_size(sender_ta, 240, 50);
+    lv_obj_align(sender_ta, LV_ALIGN_TOP_MID, 0, 50);
+    lv_textarea_set_placeholder_text(sender_ta, "Ten cua ban (VD: Tuan)");
+    lv_textarea_set_one_line(sender_ta, true);
+
+    lv_obj_t* btn_next = (lv_obj_t*)lv_btn_create(active_popup);
+    lv_obj_set_size(btn_next, 200, 50);
+    lv_obj_align(btn_next, LV_ALIGN_BOTTOM_MID, 0, -80);
+    lv_obj_t* lbl = (lv_obj_t*)lv_label_create(btn_next);
+    lv_label_set_text(lbl, "NEXT");
+    lv_obj_center(lbl);
+    lv_obj_add_event_cb(btn_next, start_recipient_btn_cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t* btn_cancel = (lv_obj_t*)lv_btn_create(active_popup);
+    lv_obj_set_size(btn_cancel, 200, 50);
+    lv_obj_align(btn_cancel, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_style_bg_color(btn_cancel, lv_palette_main(LV_PALETTE_GREY), 0);
+    lv_obj_t* lbl2 = (lv_obj_t*)lv_label_create(btn_cancel);
+    lv_label_set_text(lbl2, "CANCEL");
+    lv_obj_center(lbl2);
+    lv_obj_add_event_cb(btn_cancel, [](lv_event_t* e){ close_current_popup(); }, LV_EVENT_CLICKED, NULL);
+
+    lv_keyboard_set_textarea(kb, sender_ta);
+    lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_UPPER);
+}
+
+static void prompt_recipient_popup() {
+    user_activity_poke();
+    if (active_popup != nullptr) close_current_popup();
+
+    active_popup = (lv_obj_t*)lv_obj_create(right_panel);
+    lv_obj_set_size(active_popup, 280, 440);
+    lv_obj_align(active_popup, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_t* title = (lv_obj_t*)lv_label_create(active_popup);
+    lv_label_set_text(title, "Gui den ai?");
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
+
+    recipient_ta = (lv_obj_t*)lv_textarea_create(active_popup);
+    lv_obj_set_size(recipient_ta, 240, 50);
+    lv_obj_align(recipient_ta, LV_ALIGN_TOP_MID, 0, 50);
+    lv_textarea_set_placeholder_text(recipient_ta, "Ten nguoi nhan (VD: P101)");
+    lv_textarea_set_one_line(recipient_ta, true);
+
+    lv_obj_t* btn_next = (lv_obj_t*)lv_btn_create(active_popup);
+    lv_obj_set_size(btn_next, 200, 50);
+    lv_obj_align(btn_next, LV_ALIGN_BOTTOM_MID, 0, -80);
+    lv_obj_t* lbl = (lv_obj_t*)lv_label_create(btn_next);
+    lv_label_set_text(lbl, "NEXT");
+    lv_obj_center(lbl);
+    lv_obj_add_event_cb(btn_next, start_record_btn_cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t* btn_cancel = (lv_obj_t*)lv_btn_create(active_popup);
+    lv_obj_set_size(btn_cancel, 200, 50);
+    lv_obj_align(btn_cancel, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_style_bg_color(btn_cancel, lv_palette_main(LV_PALETTE_GREY), 0);
+    lv_obj_t* lbl2 = (lv_obj_t*)lv_label_create(btn_cancel);
+    lv_label_set_text(lbl2, "CANCEL");
+    lv_obj_center(lbl2);
+    lv_obj_add_event_cb(btn_cancel, [](lv_event_t* e){ close_current_popup(); }, LV_EVENT_CLICKED, NULL);
+
+    lv_keyboard_set_textarea(kb, recipient_ta);
+    lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_UPPER);
 }
 
 // ==================== POPUP & NOTIFICATION ====================
@@ -209,6 +327,7 @@ void close_current_popup() {
     user_activity_poke();
     if (cam_timer) lv_timer_pause(cam_timer);
     if (active_popup) {
+        lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
         lv_keyboard_set_textarea(kb, pwd_ta);
         lv_obj_delete_async(active_popup);
         active_popup = nullptr;
@@ -321,7 +440,7 @@ static void face_scan_btn_cb(lv_event_t* e) {
 }
 
 static void leave_msg_btn_cb(lv_event_t* e) {
-    if (lv_event_get_code(e) == LV_EVENT_CLICKED) create_record_popup();
+    if (lv_event_get_code(e) == LV_EVENT_CLICKED) prompt_sender_popup();
 }
 
 void set_setup_status_text(const char* text) {
@@ -422,7 +541,7 @@ static void kb_event_cb(lv_event_t* e) {
                 if (DeliveryService::verify_and_consume_code(txt, creator_name)) {
                     std::string msg = "Box Open for " + creator_name;
                     show_notification("SUCCESS", msg.c_str(), true);
-                    EventLogger::write_event_json("shipper_unlock", creator_name);
+                    EventLogger::write_event_json("shipper_unlock", std::string(txt) + "|" + creator_name);
                     LockController::trigger_delivery_box();
                 } else {
                     show_notification("FAILED", "Wrong Code!", false);
@@ -431,12 +550,21 @@ static void kb_event_cb(lv_event_t* e) {
             reset_ui_to_default();
         } else if (current_ta == popup_ta) {
             if (auth_step == 0) {
-                // === Xác thực PIN Admin ===
-                if (AuthService::verify_admin_pin(txt)) {
-                    unlock_secret_menu();
+                if (is_settings_menu) {
+                    if (AuthService::verify_tenant_pin(txt)) {
+                        create_message_list_popup();
+                    } else {
+                        show_notification("DENIED", "Wrong PIN!", false);
+                        lv_textarea_set_text(popup_ta, "");
+                    }
                 } else {
-                    show_notification("DENIED", "Wrong PIN!", false);
-                    lv_textarea_set_text(popup_ta, "");
+                    // === Xác thực PIN Admin ===
+                    if (AuthService::verify_admin_pin(txt)) {
+                        unlock_secret_menu();
+                    } else {
+                        show_notification("DENIED", "Wrong PIN!", false);
+                        lv_textarea_set_text(popup_ta, "");
+                    }
                 }
             } else if (auth_step == 1 && !is_tenant_menu) {
                 show_notification("DEPRECATED", "Use Web to add code", false);
@@ -464,7 +592,7 @@ void build_door_lock_ui() {
     lv_obj_set_size(right_panel, 300, SCREEN_HEIGHT); lv_obj_align(right_panel, LV_ALIGN_RIGHT_MID, 0, 0);
     
     int btn_h = 75, sp = 15;
-    const char* n[] = {"SHIPPER", "TENANT", LV_SYMBOL_SETTINGS " SETTINGS", LV_SYMBOL_VIDEO " FACE ID", LV_SYMBOL_AUDIO " VIDEO MSG"};
+    const char* n[] = {"SHIPPER", "TENANT", LV_SYMBOL_SETTINGS " MESSAGES", LV_SYMBOL_VIDEO " FACE ID", LV_SYMBOL_AUDIO " LEAVE MSG"};
     lv_color_t c[] = {lv_palette_main(LV_PALETTE_ORANGE), lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_GREY), lv_palette_main(LV_PALETTE_TEAL), lv_palette_main(LV_PALETTE_PURPLE)};
     
     for (int i = 0; i < 5; i++) {
@@ -475,8 +603,8 @@ void build_door_lock_ui() {
         lv_obj_t* l = (lv_obj_t*)lv_label_create(b);
         lv_label_set_text(l, n[i]); lv_obj_center(l);
         if (i == 0) lv_obj_add_event_cb(b, [](lv_event_t* e){ user_activity_poke(); current_mode = MODE_SHIPPER; lv_textarea_set_placeholder_text(pwd_ta, "Order code..."); lv_textarea_set_password_mode(pwd_ta, false); lv_textarea_set_text(pwd_ta, ""); }, LV_EVENT_CLICKED, NULL);
-        else if (i == 1) lv_obj_add_event_cb(b, [](lv_event_t* e){ user_activity_poke(); is_tenant_menu = true; create_auth_popup("TENANT CONFIG"); }, LV_EVENT_CLICKED, NULL);
-        else if (i == 2) lv_obj_add_event_cb(b, [](lv_event_t* e){ user_activity_poke(); is_tenant_menu = false; create_auth_popup("SHIPPER CONFIG"); }, LV_EVENT_CLICKED, NULL);
+        else if (i == 1) lv_obj_add_event_cb(b, [](lv_event_t* e){ user_activity_poke(); is_tenant_menu = true; is_settings_menu = false; create_auth_popup("TENANT CONFIG"); }, LV_EVENT_CLICKED, NULL);
+        else if (i == 2) lv_obj_add_event_cb(b, [](lv_event_t* e){ user_activity_poke(); is_tenant_menu = false; is_settings_menu = true; create_auth_popup("MESSAGES PIN"); }, LV_EVENT_CLICKED, NULL);
         else if (i == 3) lv_obj_add_event_cb(b, face_scan_btn_cb, LV_EVENT_CLICKED, NULL);
         else if (i == 4) lv_obj_add_event_cb(b, leave_msg_btn_cb, LV_EVENT_CLICKED, NULL);
     }

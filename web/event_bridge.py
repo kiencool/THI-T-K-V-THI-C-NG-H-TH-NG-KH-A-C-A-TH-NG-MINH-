@@ -25,6 +25,17 @@ class EventBridge:
             "MAIN DOOR": {"physical": "closed", "lock": "locked"},
             "DELIVERY BOX": {"physical": "closed", "lock": "locked"}
         }
+        self.update_web_status_file()
+
+    def update_web_status_file(self):
+        try:
+            main_open = (self.door_states["MAIN DOOR"]["lock"] == "unlocked")
+            delivery_open = (self.door_states["DELIVERY BOX"]["lock"] == "unlocked")
+            with open("/tmp/door_status_web.json", "w") as f:
+                json.dump({"main_door": "open" if main_open else "locked", 
+                           "delivery_box": "open" if delivery_open else "locked"}, f)
+        except Exception:
+            pass
 
     def start_monitoring(self):
         if os.path.exists(self.log_file):
@@ -95,6 +106,14 @@ class EventBridge:
                         door_name = detail_str.split(",")[0]
                         door_target = "DELIVERY BOX" if event_type == "shipper_unlock" else door_name
                         
+                        # Tự động lật ngược logic trạng thái vật lý để đồng bộ với phần cứng bị ngược (OPEN if 1)
+                        if event_type == "physical_door_open":
+                            event_data["event"] = "physical_door_close"
+                            event_type = "physical_door_close"
+                        elif event_type == "physical_door_close":
+                            event_data["event"] = "physical_door_open"
+                            event_type = "physical_door_open"
+                        
                         if event_type == "door_lock" or event_type == "physical_door_close":
                             self.last_lock_time[door_target] = time.time()
                         elif event_type == "physical_door_open":
@@ -135,9 +154,11 @@ class EventBridge:
                         elif event_type == "door_lock":
                             self.door_states[door_target]["lock"] = "locked"
 
+                        self.update_web_status_file()
+
                         try:
                             if event_type in ["door_unlock", "physical_door_open", "shipper_unlock", "door_lock", "physical_door_close"]:
-                                is_open = (self.door_states[door_target]["physical"] == "open" or self.door_states[door_target]["lock"] == "unlocked")
+                                is_open = (self.door_states[door_target]["lock"] == "unlocked")
                                 self.sio.emit('door_status', {"door": door_target, "status": "unlocked" if is_open else "locked"})
                                 
                             if event_type.startswith("rfid_"):
@@ -149,13 +170,15 @@ class EventBridge:
 
 
 if __name__ == '__main__':
-    time.sleep(2)
     sio = socketio.Client()
-    try:
-        sio.connect('http://localhost:5000')
-    except Exception as e:
-        print(f"Socket.IO connection failed: {e}")
-        pass
+    connected = False
+    while not connected:
+        try:
+            sio.connect('http://localhost:5000')
+            connected = True
+        except Exception as e:
+            print(f"Socket.IO connection failed: {e}. Retrying in 2 seconds...")
+            time.sleep(2)
 
     bridge = EventBridge(
         sio=sio,

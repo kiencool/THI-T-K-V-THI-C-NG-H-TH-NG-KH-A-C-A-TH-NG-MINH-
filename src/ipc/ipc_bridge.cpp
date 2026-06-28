@@ -51,6 +51,7 @@ WebCommand poll_web_command() {
     if (cmd == "LOCK_DELIVERY_BOX") return WebCommand::LOCK_DELIVERY_BOX;
     if (cmd == "LOCK_ALL") return WebCommand::LOCK_ALL;
     if (cmd == "RELOAD_CARDS") return WebCommand::RELOAD_CARDS;
+    if (cmd == "RELOAD_PASSWORDS") return WebCommand::RELOAD_PASSWORDS;
     
     return WebCommand::NONE;
 }
