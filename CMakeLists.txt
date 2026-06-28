@@ -10,12 +10,18 @@ set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
 
 # 1. Thêm thư viện lõi LVGL
-add_subdirectory(lvgl)
+add_subdirectory(lib/lvgl)
 
 # 2. Khai báo các file mã nguồn C++ của dự án
 set(SOURCES
     src/main.cpp
-    src/ui/ui_app.cpp
+    src/ui/ui_manager.cpp
+    src/services/auth_service.cpp
+    src/services/delivery_service.cpp
+    src/services/event_logger.cpp
+    src/drivers/lock_controller.cpp
+    src/drivers/process_manager.cpp
+    src/ipc/ipc_bridge.cpp
 )
 
 # 3. Tạo file thực thi tên là "smart_door_app"
@@ -24,7 +30,7 @@ add_executable(smart_door_app ${SOURCES})
 # 4. Chỉ định thư mục chứa các file header (.h)
 target_include_directories(smart_door_app PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/lvgl
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lvgl
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
